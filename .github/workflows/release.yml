@@ -1,0 +1,88 @@
+# Publishes the source distribution of twincher:
+#  - on PyPI, when a release is published on GitHub (its tag must be v<version>, e.g. v0.1.0);
+#  - on TestPyPI, when the workflow is started manually ("Run workflow" in the Actions tab),
+#    for trial runs.
+# Publishing uses trusted publishing: PyPI verifies that the upload comes from this workflow of
+# this repository, so no API token is stored in GitHub. PyPI and TestPyPI have to be configured
+# once for this (see "Releasing" in CONTRIBUTING.md).
+
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Check that the tag of the release matches the version
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          if [ "$TAG" != "v$version" ]; then
+            echo "The tag $TAG does not match the version $version in pyproject.toml (expected v$version)"
+            exit 1
+          fi
+
+      - name: Build and check the source distribution
+        run: |
+          python -m pip install build twine
+          python -m build --sdist
+          python -m twine check dist/*
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sdist
+          path: dist/
+
+  publish-testpypi:
+    name: Publish on TestPyPI
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/twincher/
+    permissions:
+      id-token: write # for trusted publishing
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: sdist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    name: Publish on PyPI
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/twincher/
+    permissions:
+      id-token: write # for trusted publishing
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: sdist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1

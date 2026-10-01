@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the article below."
+title: "twincher"
+type: software
+abstract: >-
+  Python package with a C++/CUDA core that implements twinchers: trainable
+  diffeomorphic representations for fast, never-stalling solution of inverse
+  problems.
+authors:
+  - family-names: Gonoskov
+    given-names: Arkady
+    email: contact@twincher.ai
+version: 0.1.0
+license: AGPL-3.0-only
+url: "https://www.twincher.ai"
+repository-code: "https://github.com/arkady-gonoskov/twincher"
+keywords:
+  - inverse problems
+  - diffeomorphism
+  - representation learning
+  - machine learning
+preferred-citation:
+  type: article
+  title: "Twincher: Bijective Representation Learning for Robust Inversion of Continuous Systems"
+  authors:
+    - family-names: Gonoskov
+      given-names: Arkady
+  journal: "arXiv preprint arXiv:2605.13470"
+  year: 2026
+  month: 5
+  doi: "10.48550/arXiv.2605.13470"
+  url: "https://arxiv.org/abs/2605.13470"

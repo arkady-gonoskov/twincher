@@ -1,0 +1,123 @@
+# Builds twincher and runs the tests on every push to main and on every pull request.
+#
+# The runners provided by GitHub have no GPU. Therefore:
+#  - the job "tests" builds the CPU-only package (no CUDA compiler) and runs all tests except
+#    those that need a GPU, which are skipped automatically;
+#  - the job "cuda-build" compiles the CUDA backend in a container with the CUDA toolkit, to
+#    detect compilation problems; the GPU tests are skipped there as well.
+# The GPU tests have to be run on a machine with a GPU: python -m pytest
+
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# a new push to the same branch or pull request cancels the runs that are still in progress
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # CPU-only build of PyTorch: much smaller than the default build with CUDA libraries
+  TORCH_INDEX: https://download.pytorch.org/whl/cpu
+
+jobs:
+  tests:
+    name: Python ${{ matrix.python-version }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # macOS is not a primary target: its result is reported, but does not fail the workflow
+    continue-on-error: ${{ matrix.experimental || false }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        include:
+          - os: macos-latest
+            python-version: "3.12"
+            experimental: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install PyTorch (CPU-only)
+        if: runner.os == 'Linux'
+        run: python -m pip install torch --index-url "$TORCH_INDEX"
+
+      - name: Build and install twincher
+        run: python -m pip install -v ".[test]"
+
+      - name: Run tests
+        run: python -m pytest
+
+  cuda-build:
+    name: CUDA ${{ matrix.cuda }} build
+    runs-on: ubuntu-latest
+    container: nvidia/cuda:${{ matrix.cuda }}-devel-ubuntu24.04
+    # CUDA 12 has not been verified yet: its result is reported, but does not fail the workflow
+    continue-on-error: ${{ matrix.experimental || false }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cuda: "13.4.2"
+          - cuda: "12.9.2"
+            experimental: true
+    steps:
+      - name: Install Python and git
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git python3 python3-dev python3-venv
+          python3 -m venv /opt/venv
+          echo "/opt/venv/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/checkout@v7
+
+      - name: Install PyTorch (CPU-only)
+        run: python -m pip install torch --index-url "$TORCH_INDEX"
+
+      # TWINCHER_CUDA=ON makes the build fail if the CUDA compiler is not found. Without a
+      # GPU, nvcc compiles for its default GPU architecture.
+      - name: Build and install twincher with the CUDA backend
+        run: python -m pip install -v ".[test]" -Ccmake.define.TWINCHER_CUDA=ON
+
+      - name: Check that the CUDA backend is built
+        run: python -c "import twincher; assert twincher._core.cuda_enabled"
+
+      - name: Run tests
+        run: python -m pytest
+
+  sdist:
+    name: Source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Build the source distribution
+        run: |
+          python -m pip install build twine
+          python -m build --sdist
+          python -m twine check dist/*
+
+      - name: Install PyTorch (CPU-only)
+        run: python -m pip install torch --index-url "$TORCH_INDEX"
+
+      # verifies that the source distribution contains everything needed to build the package
+      - name: Install twincher from the source distribution
+        run: python -m pip install pytest "$(ls dist/twincher-*.tar.gz)"
+
+      - name: Run tests
+        run: python -m pytest

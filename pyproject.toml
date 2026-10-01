@@ -1,0 +1,73 @@
+[build-system]
+requires = ["scikit-build-core>=0.11", "pybind11>=2.13"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "twincher"
+version = "0.1.0"
+description = "Twinchers: trainable diffeomorphic representations for fast, never-stalling solution of inverse problems"
+# PyPI cannot render the formulas and images of README.md: the package page has its own text
+readme = "docs/pypi_description.md"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
+authors = [{ name = "Arkady Gonoskov", email = "contact@twincher.ai" }]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "torch>=2.1",
+    "matplotlib>=3.7",
+]
+keywords = [
+    "inverse problems",
+    "diffeomorphism",
+    "representation learning",
+    "Gauss-Newton",
+    "machine learning",
+    "CUDA",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: GPU :: NVIDIA CUDA",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+# tools needed for development builds without build isolation (see CONTRIBUTING.md)
+dev = [
+    "pytest>=8",
+    "scikit-build-core>=0.11",
+    "pybind11>=2.13",
+    "cmake>=3.24",
+    "ninja",
+    "build",
+]
+
+[project.urls]
+Homepage = "https://www.twincher.ai"
+Repository = "https://github.com/arkady-gonoskov/twincher"
+Issues = "https://github.com/arkady-gonoskov/twincher/issues"
+Changelog = "https://github.com/arkady-gonoskov/twincher/blob/main/CHANGELOG.md"
+Paper = "https://arxiv.org/abs/2605.13470"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+build.verbose = false
+wheel.packages = ["python/twincher"]
+# images of README.md and the configuration of tools are not needed to build or use the package
+sdist.exclude = ["assets/", ".vscode/", ".github/"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+markers = [
+    "gpu: needs a CUDA GPU usable by twincher (skipped automatically if there is none)",
+    "e2e: end-to-end test, slower than the unit tests (exclude with: -m 'not e2e')",
+]
