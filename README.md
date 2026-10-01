@@ -145,9 +145,9 @@ It turns out practical to consider the propagation of gradients with respect to 
 where the number of modes $`\dim(p) = n_p \leq n_s`$ and the superscript denotes the 0-th layer (input). To transition from $`j`$-th to the next layer during the forward pass we do:
 1. For each relevant twinch we compute: $`s^j \rightarrow s^{j+1}`$ and $`\partial s^{j+1}/\partial s^j`$;
 2. We use sparse computation to update matrix $`Q`$:
-   ```math
-   Q^{j+1} = \frac{\partial s^{j+1}}{\partial s^j} Q^j.
-   ```
+```math
+Q^{j+1} = \frac{\partial s^{j+1}}{\partial s^j} Q^j.
+```
 
 This forward pass is referred to as *forward-query*, while the minimal computation $`s^j \rightarrow s^{j+1}`$ that results in $`s^{out}`$ only is referred to as *forward-inference*. In both cases the pass has $`O(n_c n_s n_l)`$ computational complexity and requires $`O(n_c n_s n_p)`$ memory, where $`n_c`$ is the number of cases in the batch (storing twincher parameters requires $`O(n_s n_l)`$ memory).  
 
@@ -162,9 +162,9 @@ In this case, after obtaining $`s^{out}`$ using *forward-inference* pass we init
 with $`(I_{n_p, n_s})_{i, j} = \delta_{i, j}`$ being a matrix of size $`n_p \times n_s`$, and make a *backward-variance* pass composed for each layer of two operations (which also results in $`O(n_c n_s n_l)`$ computational complexity and $`O(n_c n_s n_p)`$ memory requirements):
 1. For each relevant twinch we compute $`s^{j+1} \rightarrow s^j`$ and $`\partial s^j/\partial s^{j+1}`$;
 2. We use sparse computations to update $`V`$:
-   ```math
-   V^{j} = V^{j+1} \frac{\partial s^j}{\partial s^{j+1}}.
-   ```
+```math
+V^{j} = V^{j+1} \frac{\partial s^j}{\partial s^{j+1}}.
+```
 
 When it comes to computing the derivative $`\partial L/\partial a`$ it is again practical to consider a more general case of $`L`$ being a function of matrix $`u = \partial r /\partial p`$ with $`n_r, n_p \leq n_s`$.  In addition, we include the possible dependence of $`L`$ on $`s`$ at final and all inner layers, which is practical for enforcing all the $`s`$ components to stay within some predefined window that ensures the influence of twinches, for which we can restrict $`c_0, c_1 \in (-2, 2)`$. For our computations we define auxiliary tensors that are updated during the backward pass (as previously $`j = 0, ..., n_l`$ denotes the layer):
 ```math
@@ -207,7 +207,7 @@ where hyper-parameters $`w_s`$, $`w_l`$ and $`w_u`$ control scale value, as well
 
 Consider continuous forward process in the form of a callable function $`p \in [-1, 1]^{n_p} \rightarrow y(p) \in [-1, 1]^{n_y}`$ and the task of solving inverse problem: for a given $`y^\star`$ find $`p^\star`$ such that $`y(p^\star) = y^\star`$ (we generally assume $`n_y \geq n_p`$). More generally we can permit $`y^\star`$ to lie outside manifold $`y(p)`$ (for example due to noise in practical settings) and thus our task is to find:
 ```math
-p^\star = \operatorname*{arg\,min}_p \|y(p) - y^\star\|.
+p^\star = \text{argmin}_p \|y(p) - y^\star\|.
 ```
 Note that we first consider well-posed inverse problems, i.e. the problems that permit exactly one solution for $`\forall y^\star \in y([-1, 1]^{n_p})`$ (ill-posed problems are accessible for the `gs` architecture, see below).
 
@@ -252,67 +252,67 @@ The inductive bias of twinchers has been empirically observed to provide continu
 Let us now outline the training process. We initiate a twincher with $`n_s \geq n_y`$ and preallocate computational entity named `Shuttle` for batch computations with $`n_p = \dim(p)`$. We then set $`R = R_{\text{step}}`$ and perform the following routine at each iteration: 
 
 1. Sample a batch of $`n_c`$ cases and use stencil $`y(p)`$ to compute or estimate (using differentiable capabilities of the stencil, finite differences and/or interpolation of collected data):
-   ```math
-   p_i \sim U\left([-R, R]^{n_p}\right), \:\:
-   y_i = y(p_i), \:\:
-   \left(\frac{\partial y}{\partial p}\right)_i = \left.\frac{\partial y}{\partial p}\right|_{p = p_i}.
-   ```
+```math
+p_i \sim U\left([-R, R]^{n_p}\right), \:\:
+y_i = y(p_i), \:\:
+\left(\frac{\partial y}{\partial p}\right)_i = \left.\frac{\partial y}{\partial p}\right|_{p = p_i}.
+```
 
 2. Assign inputs and perform a forward-query pass (hereafter we omit batch index $`i`$ and imply that for all relevant tensors' indices beyond $`n_y`$ zero values are assigned):
-   ```math
-   \begin{aligned}
-   &s = y, \:\: Q = \frac{\partial y}{\partial p}, \\
-   & s, Q \xrightarrow{\text{forward-query}} s, Q. 
-   \end{aligned}
-   ```
+```math
+\begin{aligned}
+&s = y, \:\: Q = \frac{\partial y}{\partial p}, \\
+& s, Q \xrightarrow{} (\text{forward-query}) \xrightarrow{} s, Q. 
+\end{aligned}
+```
 
 3. Assign tensors $`b`$, $`B`$ and perform backward-query pass:
-   ```math
-   \begin{aligned}
-   & b = 0, \\
-   & B_{\text{det}} = -2 a_{\text{det}} \text{ReLU}\left(m_{\text{det}} - \det Q\right) \det(Q) Q^{-T},\\
-   & \left(B_{\text{trim}}\right)_{k, l} = 2 a_{\text{trim}} \text{ReLU}\left(\left\|Q_{:, l}\right\| - v_{\text{trim}}\right)\left\|Q_{:, l}\right\|^{-1} Q_{k, l},\\
-   & B = B_{\text{det}} + B_{\text{trim}},\\
-   & s, b, B \xrightarrow{\text{backward-query}} \frac{\partial L_\text{hs}}{\partial a}.
-   \end{aligned}
-   ```
+```math
+\begin{aligned}
+& b = 0, \\
+& B_{\text{det}} = -2 a_{\text{det}} \text{ReLU}\left(m_{\text{det}} - \det Q\right) \det(Q) Q^{-T},\\
+& \left(B_{\text{trim}}\right)_{k, l} = 2 a_{\text{trim}} \text{ReLU}\left(\left\|Q_{:, l}\right\| - v_{\text{trim}}\right)\left\|Q_{:, l}\right\|^{-1} Q_{k, l},\\
+& B = B_{\text{det}} + B_{\text{trim}},\\
+& s, b, B \xrightarrow{} (\text{backward-query}) \xrightarrow{} \frac{\partial L_\text{hs}}{\partial a}.
+\end{aligned}
+```
 
 4. Randomly generate unit vectors in subspace $`(\partial y /\partial p)^\perp`$ for enhancing tolerance to noise:
-   ```math
-   \begin{aligned}
-   &y_k \sim U\left([-1, 1]^{n_y}\right),\\
-   &\hat{y}_k = \text{normalize}\left(y_k - \frac{\partial y}{\partial p}\left(\left(\frac{\partial y}{\partial p}\right)^+ y_k\right) \right). 
-   \end{aligned}
-   ```
+```math
+\begin{aligned}
+&y_k \sim U\left([-1, 1]^{n_y}\right),\\
+&\hat{y}_k = \text{normalize}\left(y_k - \frac{\partial y}{\partial p}\left(\left(\frac{\partial y}{\partial p}\right)^+ y_k\right) \right). 
+\end{aligned}
+```
 
 5. Assign inputs and perform a forward-query pass:
-   ```math
-   \begin{aligned}
-   &s = y, \:\: Q = \left[\hat{y}_0, ..., \hat{y}_{n_p - 1}\right], \\
-   & s, Q \xrightarrow{\text{forward-query}} s, Q. 
-   \end{aligned}
-   ```
+```math
+\begin{aligned}
+&s = y, \:\: Q = \left[\hat{y}_0, ..., \hat{y}_{n_p - 1}\right], \\
+& s, Q \xrightarrow{} (\text{forward-query}) \xrightarrow{} s, Q. 
+\end{aligned}
+```
 
 6. Assign tensors $`b`$, $`B`$ and perform backward-query pass:
-   ```math
-   \begin{aligned}
-   & b = 0, \\
-   & B = 2 a_\text{noise} Q,\\
-   & s, b, B \xrightarrow{\text{backward-query}} \frac{\partial L^\text{hs}_\text{noise}}{\partial a}.
-   \end{aligned}
-   ```
+```math
+\begin{aligned}
+& b = 0, \\
+& B = 2 a_\text{noise} Q,\\
+& s, b, B \xrightarrow{} (\text{backward-query}) \xrightarrow{} \frac{\partial L^\text{hs}_\text{noise}}{\partial a}.
+\end{aligned}
+```
 
 7. Combine the loss gradients from all terms and use the optimizer of choice to update the twincher parameters:
-   ```math
-   \begin{aligned}
-   &\frac{\partial L}{\partial a} = \frac{\partial L_\text{hs}}{\partial a} + \frac{\partial L^\text{hs}_\text{noise}}{\partial a},\\
-   &a: = \text{Optimizer}\left(a, \frac{\partial L}{\partial a}\right).
-   \end{aligned}
-   ```
+```math
+\begin{aligned}
+&\frac{\partial L}{\partial a} = \frac{\partial L_\text{hs}}{\partial a} + \frac{\partial L^\text{hs}_\text{noise}}{\partial a},\\
+&a: = \text{Optimizer}\left(a, \frac{\partial L}{\partial a}\right).
+\end{aligned}
+```
 8. In case step 3 indicated that all $`\det Q \geq m_\text{clearance}`$ (or this holds for a number of last iterations) increase $`R`$:
-   ```math
-   R := \min(1, R + R_\text{step}).
-   ```
+```math
+R := \min(1, R + R_\text{step}).
+```
 
 Note that the outlined routine represents a minimal version, which is extended with several straightforward modifications that are omitted here for clarity (see documentation and source code).
 
@@ -334,7 +334,7 @@ In Fig. 3 we show the spiral on $`y_0`$-$`y_1`$ plane together with the evolutio
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./assets/spiral_1.3-dark.gif">
     <source media="(prefers-color-scheme: light)" srcset="./assets/spiral_1.3-light.gif">
-    <img src="./assets/spiral_1.3-light.gif" alt="Evolution of the learned representation for the spiral problem" width="400">
+    <img src="./assets/spiral_1.3-light.gif" alt="Evolution of the learned representation for the spiral problem" width="600">
   </picture>
   <br>
   <em>Figure 3: Evolution of r<sub>0</sub>(y<sub>0</sub>, y<sub>1</sub>) throughout the optimization process for the case of well-posed problem of finding the position p<sub>0</sub> along a spiral from coordinates (y<sub>0</sub>, y<sub>1</sub>).</em>
@@ -346,7 +346,7 @@ In Fig. 4 one can see that this results in accurate solution of the inverse prob
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./assets/spiral_parity_plot-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="./assets/spiral_parity_plot-light.svg">
-    <img src="./assets/spiral_parity_plot-light.svg" alt="Parity plot of solutions for the spiral problem" width="400">
+    <img src="./assets/spiral_parity_plot-light.svg" alt="Parity plot of solutions for the spiral problem" width="600">
   </picture>
   <br>
   <em>Figure 4: Solutions based on Gauss-Newton method in learned space r<sub>0</sub> as well as in output space y shown as a function of true value p<sub>true</sub>.</em>
@@ -358,7 +358,7 @@ In Fig. 5 we show to what extent the solutions are tolerant to noise in $`y`$. F
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./assets/spiral_noise_tol-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="./assets/spiral_noise_tol-light.svg">
-    <img src="./assets/spiral_noise_tol-light.svg" alt="Tolerance to noise for the spiral problem" width="400">
+    <img src="./assets/spiral_noise_tol-light.svg" alt="Tolerance to noise for the spiral problem" width="600">
   </picture>
   <br>
   <em>Figure 5: Tolerance to noise deviations in y for </em>'hs'<em> and </em>'as'<em> twincher architectures (same number of iterations).</em>
@@ -379,7 +379,7 @@ In this case the presence of a crossing point in $`y`$ that corresponds to two d
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./assets/loop_hs-dark.gif">
     <source media="(prefers-color-scheme: light)" srcset="./assets/loop_hs-light.gif">
-    <img src="./assets/loop_hs-light.gif" alt="Evolution of the learned representation for the self-crossing loop" width="400">
+    <img src="./assets/loop_hs-light.gif" alt="Evolution of the learned representation for the self-crossing loop" width="600">
   </picture>
   <br>
   <em>Figure 6: Evolution of r<sub>0</sub>(y<sub>0</sub>, y<sub>1</sub>) throughout the optimization process for the case of ill-posed problem of finding the position p<sub>0</sub> along a self-crossing loop from coordinates (y<sub>0</sub>, y<sub>1</sub>).</em>
@@ -391,7 +391,7 @@ However, the solution of ill-posed problems is possible based on `gs` twincher a
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./assets/loop_parity_plot-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="./assets/loop_parity_plot-light.svg">
-    <img src="./assets/loop_parity_plot-light.svg" alt="Parity plot of solutions for the self-crossing loop" width="400">
+    <img src="./assets/loop_parity_plot-light.svg" alt="Parity plot of solutions for the self-crossing loop" width="600">
   </picture>
   <br>
   <em>Figure 7: Solutions of ill-posed problem of finding position along a self-crossing loop based on Gauss-Newton descent in y-space, failed attempt with </em>'hs'<em> architecture, as well as with help of </em>'gs'<em> architecture capable of dealing with ill-posed problems.</em>
@@ -411,7 +411,7 @@ with $`n_p = 2`$ and $`n_y = 32`$. An example of distribution without noise is s
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./assets/double_gaussian-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="./assets/double_gaussian-light.svg">
-    <img src="./assets/double_gaussian-light.svg" alt="Example of a double-Gaussian distribution" width="400">
+    <img src="./assets/double_gaussian-light.svg" alt="Example of a double-Gaussian distribution" width="600">
   </picture>
   <br>
   <em>Figure 8: An example of distribution that illustrates the "double-gaussian" stencil.</em>
@@ -423,7 +423,7 @@ Fig. 9 shows the grid that spans values of $`p \in [-1, 1]^2`$ in the $`r`$ spac
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./assets/double_gaussian-dark.gif">
     <source media="(prefers-color-scheme: light)" srcset="./assets/double_gaussian-light.gif">
-    <img src="./assets/double_gaussian-light.gif" alt="Evolution of the grid spanning p in r space for the double-Gaussian problem" width="400">
+    <img src="./assets/double_gaussian-light.gif" alt="Evolution of the grid spanning p in r space for the double-Gaussian problem" width="600">
   </picture>
   <br>
   <em>Figure 9: The grid spanning p &isin; [-1, 1]<sup>2</sup> shown in r space throughout the optimization within 13000 steps.</em>
@@ -435,7 +435,7 @@ Fig. 10 shows the tolerance to noise in $`y`$ for `hs` and `gs` architectures un
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./assets/double_gaussian_noise_tol-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="./assets/double_gaussian_noise_tol-light.svg">
-    <img src="./assets/double_gaussian_noise_tol-light.svg" alt="Tolerance to noise for the double-Gaussian problem" width="400">
+    <img src="./assets/double_gaussian_noise_tol-light.svg" alt="Tolerance to noise for the double-Gaussian problem" width="600">
   </picture>
   <br>
   <em>Figure 10: Tolerance to noise deviations in y for </em>'hs'<em> and </em>'gs'<em> twincher architectures (same number of optimization steps) for the 'double-gaussian' problem.</em>
@@ -447,7 +447,7 @@ Twinchers can be used in many ways, which we refer to as twincher architectures.
 
 - `as` is designed for well-posed problems. As compared to `hs`, it avoids having $`n_p`$ factor in computational complexity providing much more scalable approach for complex tasks. In addition, under similar conditions it shows much faster learning capabilities as well as better abilities to enhance noise tolerance.
 
-- `gs` is designed for ill-posed problems. Just like `as`, it avoids having $`n_p`$ factor in computational complexity. It has similar to `as` abilities to enhance noise tolerance, but overall can be slower when dealing with well-posed problems.
+- `gs` is designed for ill-posed problems. Just like `as`, it avoids having $`n_p`$ factor in computational complexity. It has similar to `as` abilities to enhance noise tolerance, but overall can be slower than `as` when dealing with the same well-posed problem.
 
 - `ha` provides a scalable paradigm for Physical AI systems.
 
