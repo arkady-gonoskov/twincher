@@ -149,7 +149,7 @@ where the number of modes $`\dim(p) = n_p \leq n_s`$ and the superscript denotes
 Q^{j+1} = \frac{\partial s^{j+1}}{\partial s^j} Q^j.
 ```
 
-This forward pass is referred to as *forward-query*, while the minimal computation $`s^j \rightarrow s^{j+1}`$ that results in $`s^{out}`$ only is referred to as *forward-inference*. In both cases the pass has $`O(n_c n_s n_l)`$ computational complexity and requires $`O(n_c n_s n_p)`$ memory, where $`n_c`$ is the number of cases in the batch (storing twincher parameters requires $`O(n_s n_l)`$ memory).  
+This forward pass is referred to as *forward-query*, while the minimal computation $`s^j \rightarrow s^{j+1}`$ that results in $`s^{out}`$ only is referred to as *forward-inference*. In both cases the pass has $`O(n_c n_s n_l n_p)`$ computational complexity and requires $`O(n_c n_s n_p)`$ memory, where $`n_c`$ is the number of cases in the batch (storing twincher parameters requires $`O(n_s n_l)`$ memory).  
 
 One reason for making *forward-inference* pass is the computation of the derivative tensor for a subvector of $`r = s^{out}_{0:n_p}`$ with respect to inputs: 
 ```math
@@ -159,7 +159,7 @@ In this case, after obtaining $`s^{out}`$ using *forward-inference* pass we init
 ```math
     V^{n_l} = \frac{\partial r}{\partial s^{n_l}} = I_{n_p, n_s},
 ```
-with $`(I_{n_p, n_s})_{i, j} = \delta_{i, j}`$ being a matrix of size $`n_p \times n_s`$, and make a *backward-variance* pass composed for each layer of two operations (which also results in $`O(n_c n_s n_l)`$ computational complexity and $`O(n_c n_s n_p)`$ memory requirements):
+with $`(I_{n_p, n_s})_{i, j} = \delta_{i, j}`$ being a matrix of size $`n_p \times n_s`$, and make a *backward-variance* pass composed for each layer of two operations (which also results in $`O(n_c n_s n_l n_p)`$ computational complexity and $`O(n_c n_s n_p)`$ memory requirements):
 1. For each relevant twinch we compute $`s^{j+1} \rightarrow s^j`$ and $`\partial s^j/\partial s^{j+1}`$;
 2. We use sparse computations to update $`V`$:
 ```math
