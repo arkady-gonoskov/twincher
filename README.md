@@ -163,7 +163,7 @@ with $`(I_{n_p, n_s})_{i, j} = \delta_{i, j}`$ being a matrix of size $`n_p \tim
 1. For each relevant twinch we compute $`s^{j+1} \rightarrow s^j`$ and $`\partial s^j/\partial s^{j+1}`$;
 2. We use sparse computations to update $`V`$:
 ```math
-V^{j} = V^{j+1} \frac{\partial s^j}{\partial s^{j+1}}.
+V^{j} = V^{j+1} \frac{\partial s^{j+1}}{\partial s^j}.
 ```
 
 When it comes to computing the derivative $`\partial L/\partial a`$ it is again practical to consider a more general case of $`L`$ being a function of matrix $`u = \partial r /\partial p`$ with $`n_r, n_p \leq n_s`$.  In addition, we include the possible dependence of $`L`$ on $`s`$ at final and all inner layers, which is practical for enforcing all the $`s`$ components to stay within some predefined window that ensures the influence of twinches, for which we can restrict $`c_0, c_1 \in (-2, 2)`$. For our computations we define auxiliary tensors that are updated during the backward pass (as previously $`j = 0, ..., n_l`$ denotes the layer):
@@ -183,7 +183,7 @@ where $`B^{n_l}`$ and $`b^{n_l}`$ practically defines the loss for the case unde
 &\text{1. } \left.C^j\right. = \frac{\partial s^j}{\partial s^{j+1}} C^{j+1};\\
 &\text{2. } \left.\frac{\partial L}{\partial a^j} \right|_\text{B-part} = B^{j+1} C^j \frac{\partial^2 s^{j+1}}{\partial s^j \partial a^j};\\
 &\text{3. } \left.\frac{\partial L}{\partial a^j} \right|_\text{A-part} = A^{j+1} \frac{\partial s^{j+1}}{\partial a^j};\\
-&\text{4. } \left.A^j\right. = A^{j+1}\frac{\partial s^{j+1}}{\partial s^j} + B^{j+1} \frac{\partial^2 s^{j+1}}{\partial s^j \partial s^j} C^{j+1};\\
+&\text{4. } \left.A^j\right. = A^{j+1}\frac{\partial s^{j+1}}{\partial s^j} + B^{j+1} \frac{\partial^2 s^{j+1}}{\partial s^j \partial s^j} C^j;\\
 &\text{5. } \left.B^j\right. = \left(\frac{\partial s^{j+1}}{\partial s^j}\right)^{T} B^{j+1};\\
 &\text{6. } \left.\frac{\partial L}{\partial a^j} \right|_\text{b-part} = b^{j+1} \frac{\partial s^{j+1}}{\partial a^j};\\
 &\text{7. } \left.b^j\right. = b^{j+1} \frac{\partial s^{j+1}}{\partial s^j};\\
