@@ -3,8 +3,9 @@
 #  - on TestPyPI, when the workflow is started manually ("Run workflow" in the Actions tab),
 #    for trial runs.
 # Publishing uses trusted publishing: PyPI verifies that the upload comes from this workflow of
-# this repository, so no API token is stored in GitHub. PyPI and TestPyPI have to be configured
-# once for this (see "Releasing" in CONTRIBUTING.md).
+# this repository, so no API token is stored in GitHub. For this, the workflow is registered as a
+# trusted publisher of the project on PyPI and TestPyPI, with the environments pypi and testpypi.
+# The steps of a release are described in CONTRIBUTING.md ("Releasing").
 
 name: Release
 
