@@ -11,6 +11,7 @@ authors:
     given-names: Arkady
     email: contact@twincher.ai
 version: 0.1.0
+date-released: 2026-10-02
 license: AGPL-3.0-only
 url: "https://www.twincher.ai"
 repository-code: "https://github.com/arkady-gonoskov/twincher"
