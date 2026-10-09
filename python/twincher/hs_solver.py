@@ -146,7 +146,10 @@ class HSSolver: # solver via Gauss-Newton descent in r space for hs architecture
         # compute inv_D
         self.inv_D.copy_(self.D)
         self.inv_D[...] += self.D_reg[...]
-        torch.linalg.inv(self.inv_D, out=self.inv_D)
+        if n_p > 1: # in-place computations may not work for 1x1 matrices
+            torch.linalg.inv(self.inv_D, out=self.inv_D)
+        else:
+            self.inv_D.copy_(torch.linalg.inv(self.inv_D))
 
         # compute dp
         torch.matmul(

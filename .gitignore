@@ -30,3 +30,8 @@ twincher_output/
 .vscode/
 .idea/
 .DS_Store
+
+# Local files of Claude Code and private notes
+CLAUDE.local.md
+.claude/settings.local.json
+/private/
