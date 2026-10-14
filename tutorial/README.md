@@ -24,14 +24,15 @@ A well-posed problem with one parameter: finding the position `p` along a spiral
 
 ## Double Gaussian: `double_gaussian.py`
 
-A problem with two parameters: finding the positions `p` of two Gaussian peaks from values of their sum on a grid of 32 points (`n_p = 2`, `n_y = 32`). The twincher is trained for 13001 iterations, computing data from the stencil during the training. Afterwards, the inverse problem is solved for 5120 random cases and the errors of `p` are printed. Outputs:
+A problem with two parameters: finding the positions `p` of two Gaussian peaks from values of their sum on a grid of 32 points (`n_p = 2`, `n_y = 32`). The twincher is trained for 13001 iterations, computing data from the stencil during the training. Afterwards, the inverse problem is solved for 5120 random cases and the errors of `p` are printed, and the tolerance to noise is tested. Outputs:
 
 - `example.png`: an example of the distribution (Fig. 8 of the README);
 - `000.png`, `001.png`, ...: the grid spanning `p` in the learned representation `r` every 200 iterations (Fig. 9);
 - `lc.png`: learning curve;
-- `final.twc`: the trained twincher.
+- `final.twc`: the trained twincher;
+- `noise_tol.png`: tolerance to noise in `y`.
 
-If `final.twc` already exists, the training is skipped and only the solution is tested. Delete the file to train again.
+If `final.twc` already exists, the training is skipped and only the solution and the tolerance to noise are tested. Delete the file to train again.
 
 ## Runtimes
 

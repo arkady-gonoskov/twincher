@@ -4,6 +4,32 @@
 import numpy as np
 import torch
 
+
+def _pinv(A, out):
+    """Pseudoinverse of a batch of tall matrices A (n_c, n_y, n_p), n_p small.
+
+    Same result as torch.linalg.pinv(A, out=out), but computed from eigendecompositions of
+    small n_p x n_p matrices: batched SVDs of tall matrices are slow on GPUs. With the
+    eigenvectors V of A^T A, the columns of B = A V span the column space of A, but they are
+    orthogonal only up to errors that grow with the squared condition number of A; a second
+    eigendecomposition, of C^T C for the normalized columns C, corrects this:
+    A^+ = V diag(1/|B_i|) (C^T C)^+ C^T.
+    """
+    eps, tiny = torch.finfo(A.dtype).eps, torch.finfo(A.dtype).tiny
+    rtol = max(A.shape[1:]) * eps  # default tolerance of torch.linalg.pinv
+    _, V = torch.linalg.eigh(A.transpose(1, 2) @ A)
+    B = A @ V
+    # singular values: accurate, unlike the square roots of the eigenvalues of A^T A
+    sigma = torch.linalg.vector_norm(B, dim=1)
+    cut = rtol * sigma.amax(dim=1, keepdim=True)
+    d = torch.where(sigma > cut, 1 / sigma.clamp_min(tiny), 0)
+    C = B * d[:, None, :]  # nearly orthonormal columns (zero for cut singular values)
+    lam, W = torch.linalg.eigh(C.transpose(1, 2) @ C)  # eigenvalues near 1 (or 0)
+    inv = torch.where(lam > rtol, 1 / lam.clamp_min(tiny), 0)
+    CtC_pinv = (W * inv[:, None, :]) @ W.transpose(1, 2)
+    torch.matmul((V * d[:, None, :]) @ CtC_pinv, C.transpose(1, 2), out=out)
+
+
 def _grad_kernel_u(v, u, c, amp, amps, losses):
     x = (v - u).relu_()
     s = torch.sqrt(x.square() + c*c + 1e-15)
@@ -39,8 +65,8 @@ class HSNoiseLoss:
 
         self.u = torch.empty((n_c, n_p), dtype=dtype, device=device)
         self.y_offset = torch.empty((n_c, n_y), dtype=dtype, device=device)
-        self.offset_p = torch.empty((n_c, n_p), dtype=dtype, device=device)
-        self.offset_y = torch.empty((n_c, n_y), dtype=dtype, device=device)
+        self.p_offset = torch.empty((n_c, n_p), dtype=dtype, device=device)
+        self.y_tang = torch.empty((n_c, n_y), dtype=dtype, device=device)
         self.offset_amps = torch.empty((n_c), dtype=dtype, device=device)
 
         self.y_pert = torch.empty((n_c, n_p, n_y), dtype=dtype, device=device)
@@ -61,7 +87,7 @@ class HSNoiseLoss:
         # borrow tools:
         SH, time_monitor, rng = self.learner.SH, self.learner.time_monitor, self.learner.rng
         
-        n_p, n_y, n_s, n_c = self.learner.n_p, self.learner.n_y, self.learner.n_s, self.learner.n_c
+        n_p, n_y, n_c = self.learner.n_p, self.learner.n_y, self.learner.n_c
 
         time_monitor.start(self.name, torch_sync=True)
 
@@ -70,28 +96,22 @@ class HSNoiseLoss:
         self.y.copy_(self.learner.y)
         self.A.copy_(self.learner.dy_dp)
 
-        torch.linalg.pinv(self.A, out=self.A_pinv)
+        _pinv(self.A, out=self.A_pinv)
 
         if self.y_range > 0:
             self.y_offset.uniform_(-1, 1, generator=rng)
             torch.matmul(
-                self.A_pinv, 
-                self.y_offset[:, :, None],
-                out=self.offset_p[:, :, None]
+                self.A_pinv, self.y_offset[:, :, None], out=self.p_offset[:, :, None]
             )
-            torch.matmul(
-                self.A, 
-                self.offset_p[:, :, None],
-                out=self.offset_y[:, :, None]
-            )
-            self.y_offset[:, :] -= self.offset_y[:, :]
-            self.offset_y[:, :] /= torch.linalg.vector_norm(
-                self.offset_y[:, :], dim=1, keepdim=True
+            torch.matmul(self.A, self.p_offset[:, :, None], out=self.y_tang[:, :, None])
+            self.y_offset[:, :] -= self.y_tang[:, :]
+            self.y_offset[:, :] /= torch.linalg.vector_norm(
+                self.y_offset[:, :], dim=1, keepdim=True
             ).clamp_min(1e-8)
 
             self.offset_amps.uniform_(0, self.y_range, generator=rng)
-            self.offset_y[:, :] *= self.offset_amps[:, None]
-            self.y[:, :] += self.offset_y[:, :]
+            self.y_offset[:, :] *= self.offset_amps[:, None]
+            self.y[:, :] += self.y_offset[:, :]
             self.y.clamp_min_(-1.0)
             self.y.clamp_max_(1.0)
 
