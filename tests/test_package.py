@@ -42,7 +42,7 @@ def test_import_does_not_load_torch_and_matplotlib():
 
 def test_builtin_components_are_registered():
     assert "hs" in registry.components("arch_defaults")
-    assert {"hs", "hs_noise"} <= set(registry.components("loss_terms"))
+    assert {"hs", "hs_noise", "hs_sm_noise"} <= set(registry.components("loss_terms"))
     assert "hs" in registry.components("solvers")
     assert "hs_monitor_p2" in registry.components("monitors")
 

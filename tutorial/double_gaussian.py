@@ -1,9 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Copyright (C) 2025-2026 Arkady Gonoskov
 
+import argparse
 from pathlib import Path
-import twincher
+
 import numpy as np
+import twincher
+
 
 # Define stencil
 class DoubleGaussian:
@@ -35,11 +38,23 @@ class DoubleGaussian:
             dy_dp[:, :, i_p] /= dp_eval
             p[:, i_p] -= dp_eval
 
+
+# Choose the loss term for tolerance to noise
+parser = argparse.ArgumentParser(description="Double-Gaussian tutorial")
+parser.add_argument(
+    "--noise-loss",
+    choices=["hs_noise", "hs_sm_noise"],
+    default="hs_noise",
+    help="hs_noise: random perpendicular directions (default of hs); hs_sm_noise: single mode",
+)
+noise_loss = parser.parse_args().noise_loss
+
 # Create working dir
 stencil = DoubleGaussian(n_y=32)
 n_p, n_y = stencil.n_p, stencil.n_y
 script_path = Path(__file__).resolve()
-dir = Path(__file__).resolve().parent / f"output_{stencil.name}"
+suffix = "" if noise_loss == "hs_noise" else f"_{noise_loss}"
+dir = Path(__file__).resolve().parent / f"output_{stencil.name}{suffix}"
 dir.mkdir(exist_ok=True)
 
 # Plot example
@@ -51,6 +66,16 @@ plot_example(stencil=stencil, file_name=dir / "example.png")
 if not (dir / "final.twc").exists():
     # Create learner, generate data, initiate
     learner = twincher.Learner(arch="hs", n_s=2*n_y, n_l=64, dir=dir)
+    if noise_loss == "hs_sm_noise":
+        # replace the default noise loss by the single-mode one, with the same parameters
+        learner.modify_params(
+            params={
+                "loss_terms": {
+                    "hs_noise": None,
+                    "hs_sm_noise": {"amp": 1e-4, "vel_scale": 1.0, "y_range": 0.5},
+                }
+            }
+        )
     learner.set_stencil(stencil=stencil)
     #learner.generate_data(stencil=stencil, n_grid=32)
     learner.init()

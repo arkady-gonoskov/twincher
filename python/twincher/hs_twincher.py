@@ -4,9 +4,11 @@
 def register_components(register):
     from .hs_loss import HSLoss
     from .hs_noise_loss import HSNoiseLoss
+    from .hs_sm_noise_loss import HSSMNoiseLoss
 
     register("loss_terms", "hs", HSLoss)
     register("loss_terms", "hs_noise", HSNoiseLoss)
+    register("loss_terms", "hs_sm_noise", HSSMNoiseLoss)
 
     register("arch_defaults", "hs", {
         "hs" : {
