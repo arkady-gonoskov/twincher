@@ -92,3 +92,6 @@ p_sol = solver.p.detach().cpu().numpy()
 diffs = np.linalg.norm(p_true - p_sol, axis=1)
 print("\nMax difference in p:", np.max(diffs))
 print("Average difference in p:", np.mean(diffs))
+
+twincher.noise_check(file_name=str(dir) + "/final.twc", stencil=stencil)
+print(f"Noise-tolerance test saved to {dir}/noise_tol.png")

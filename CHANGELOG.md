@@ -7,9 +7,11 @@ All notable changes to this project are documented in this file. The format is b
 ### Changed
 
 - `HSNoiseLoss` computes the pseudoinverse of `dy/dp` from eigendecompositions of small `n_p x n_p` matrices instead of batched SVDs, which are slow on GPUs (on a laptop GPU, 2 times faster for `n_y = 32, n_p = 2` and about 900 times faster for `n_y = 128, n_p = 4`).
+- The double-Gaussian tutorial also tests the tolerance to noise (`noise_tol.png`).
 
 ### Fixed
 
+- `HSNoiseLoss`: the random offsets from the manifold `y(p)` set by `y_range` were applied along the tangent directions instead of perpendicular to them.
 - `HSSolver`: for `n_p = 1`, the in-place inversion of 1x1 matrices returned 1 instead of the inverse, so that the solution converged linearly instead of quadratically.
 
 ## [0.1.0] - 2026-10-02
