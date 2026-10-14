@@ -8,9 +8,10 @@ Run them from this directory:
 cd tutorial
 python spiral.py
 python double_gaussian.py
+python double_gaussian.py --noise-loss hs_sm_noise
 ```
 
-Each script writes its results to a directory next to it: `output_spiral_1.3` and `output_double_gaussian`, respectively.
+Each script writes its results to a directory next to it: `output_spiral_1.3` and `output_double_gaussian` (`output_double_gaussian_hs_sm_noise` with `--noise-loss hs_sm_noise`), respectively.
 
 ## Spiral: `spiral.py`
 
@@ -33,6 +34,13 @@ A problem with two parameters: finding the positions `p` of two Gaussian peaks f
 - `noise_tol.png`: tolerance to noise in `y`.
 
 If `final.twc` already exists, the training is skipped and only the solution and the tolerance to noise are tested. Delete the file to train again.
+
+The option `--noise-loss` selects the loss term that trains the tolerance to noise in `y`; the script shows how the default term of the `hs` architecture is replaced with `Learner.modify_params`. Both terms use the same amplitude and random offsets from the manifold `y(p)` (`y_range = 0.5`):
+
+- `hs_noise` (default): penalizes the change of `r` along random directions perpendicular to the manifold `y(p)`;
+- `hs_sm_noise` (single mode): penalizes the change of `r` along the perpendicular direction in which it is largest.
+
+In our runs, `hs_sm_noise` gave residuals closer to the input noise after the same number of iterations (compare the two `noise_tol.png`), at about the same runtime.
 
 ## Runtimes
 

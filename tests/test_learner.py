@@ -116,3 +116,42 @@ def test_solver_and_verifier(tmp_path):
         twincher.Verifier(stencil=Stencil(), file_name=file_name, device="cpu")
     with pytest.raises(ValueError, match="either SH or file_name"):
         twincher.Verifier(stencil=Stencil())
+
+
+def test_hs_sm_noise(tmp_path):
+    # n_p = 2 and n_y = 4: two directions perpendicular to the manifold
+    learner = twincher.Learner(
+        arch="hs", n_s=6, n_l=3, n_c=64, device="cpu", dir=tmp_path, plot_progress=False
+    )
+    p = learner.get_p_request(n_p=2, n_grid=4)
+    p0, p1, zero, one = p[:, 0], p[:, 1], np.zeros(len(p)), np.ones(len(p))
+    y = np.stack([p0, p1, 0.5 * p0 * p1, 0.5 * p0**2], axis=1)
+    dy_dp = np.stack([[one, zero], [zero, one], [0.5 * p1, 0.5 * p0], [p0, zero]])
+    learner.set_data(y, dy_dp.transpose(2, 0, 1))
+    learner.modify_params(
+        {"loss_terms": {"hs_noise": None, "hs_sm_noise": {"y_range": 0.1}}}
+    )
+    for _ in range(3):
+        learner.step()
+    term = learner.loss_terms[1]
+    assert term.name == "hs_sm_noise" and np.isfinite(float(term.loss))
+    assert learner.SH.n_m == learner.n_p  # restored after the passes with the single mode
+
+    # the penalized direction v is perpendicular to dy/dp, and r changes most along it
+    v, A, B = (t.numpy() for t in (term.y_max, term.A, term.B))  # B = P_N (dr/dy)^T
+    assert np.abs(np.einsum("cyp,cy->cp", A, v)).max() < 1e-12
+    gain = np.linalg.norm(np.einsum("cyp,cy->cp", B, v), axis=1)
+    np.testing.assert_allclose(gain, np.linalg.svd(B, compute_uv=False)[:, 0], rtol=1e-12)
+
+
+@pytest.mark.parametrize("noise_loss", ["hs_noise", "hs_sm_noise"])
+def test_noise_loss_warns_without_normal_space(tmp_path, noise_loss):
+    learner = twincher.Learner(
+        arch="hs", n_s=4, n_l=2, n_c=8, device="cpu", dir=tmp_path, plot_progress=False
+    )
+    p = learner.get_p_request(n_p=1, n_grid=4)
+    learner.set_data(p, np.ones((len(p), 1, 1)))  # n_y = n_p = 1
+    if noise_loss == "hs_sm_noise":
+        learner.modify_params({"loss_terms": {"hs_noise": None, "hs_sm_noise": {}}})
+    with pytest.warns(UserWarning, match=f"loss term {noise_loss}: n_y = 1 <= n_p = 1"):
+        learner.init()

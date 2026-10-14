@@ -1,8 +1,23 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Copyright (C) 2025-2026 Arkady Gonoskov
 
+import warnings
+
 import numpy as np
 import torch
+
+
+def _warn_without_normal_space(name, n_y, n_p):
+    """Warn if y has no directions perpendicular to the manifold y(p) (n_y <= n_p)."""
+    if n_y <= n_p:
+        warnings.warn(
+            f"loss term {name}: n_y = {n_y} <= n_p = {n_p}, so y has no directions "
+            "perpendicular to the manifold y(p); the term would penalize changes of r along "
+            "the manifold (in directions given by rounding errors), against the other loss "
+            "terms. Remove it with "
+            f'learner.modify_params({{"loss_terms": {{"{name}": None}}}}).',
+            stacklevel=2,
+        )
 
 
 def _pinv(A, out):
@@ -54,6 +69,7 @@ class HSNoiseLoss:
     def init(self, learner):
         self.learner = learner
         n_c, n_p, n_y, dtype, device, time_monitor = learner.n_c, learner.n_p, learner.n_y, learner.dtype, learner.device, learner.time_monitor
+        _warn_without_normal_space(self.name, n_y, n_p)
         time_monitor.start(self.name + ".init", torch_sync=True)
         self.A_pinv = torch.empty((n_c, n_p, n_y), dtype=dtype, device=device)
 
