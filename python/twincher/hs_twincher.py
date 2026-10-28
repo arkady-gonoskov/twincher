@@ -16,11 +16,13 @@ def register_components(register):
             "amp" : 3.0, # amplitude of loss
             "det_clearance" : 0.5, # threshold for triggering expansion
             "p_range_step" : 0.01, # increment for p_range
-            "ramp_boost" : 2.0, # loss amplitude boost at the periphery 
-            "ramp_size" : 0.2, # size of the ramp for the loss boost
+            "ramp_boost" : 1.0, # loss amplitude factor at the border of the box
+            "ramp_size" : 0.2, # width of the ramp of the loss amplitude (and initial p_range)
             "trimmer_threshold" : 1.3, # threshold for the loss on velocities
-            "trimmer_amp" : 1.0, # amplitude of loss for velocities 
+            "trimmer_amp" : 1.0, # amplitude of loss for velocities
             "promotion_threshold" : 10, # the number of valid-state iterations to pass until promotion
+            "trimmer_domain_amp" : 1.0, # amplitude of the trimmer over the whole domain (0: off)
+            "momentum_reset" : None, # reset of Adam's momentum at loss spikes (True or settings)
         },
         "hs_noise" : {
             "amp": 1e-4,
