@@ -1,0 +1,56 @@
+{
+    "description": "LidarFit configuration for ITODD obj 26 (tee connector, no symmetry) with the six chart twinchers of milestone 2 (bop_itodd/README.md, Part II), before noise post-training, with p clamped to the trained box (|p_k| <= 0.86) after each solver step; the stencil of each chart is that of its twincher (metadata). Paths are relative to this file.",
+    "obj_id": 26,
+    "model": "{ITODD}/itodd_models/models/obj_000026.ply",
+    "model_eval": "{ITODD}/itodd_models/models_eval/obj_000026.ply",
+    "models_info": "{ITODD}/itodd_models/models_eval/models_info.json",
+    "charts": [
+        {
+            "name": "Z0",
+            "twincher": "output_charts_fb/Z0/best.twc"
+        },
+        {
+            "name": "Z1",
+            "twincher": "output_charts_fb/Z1/best.twc"
+        },
+        {
+            "name": "Z2",
+            "twincher": "output_charts_fb/Z2/best.twc"
+        },
+        {
+            "name": "Y0",
+            "twincher": "output_charts_fb/Y0_l384_best7500.twc"
+        },
+        {
+            "name": "Y1",
+            "twincher": "output_charts_fb/Y1/best.twc"
+        },
+        {
+            "name": "Y2",
+            "twincher": "output_charts_fb/Y2/best.twc"
+        }
+    ],
+    "solver": {
+        "n_iter": 20,
+        "attempts": [
+            {
+                "newton": true
+            },
+            {
+                "newton": false
+            }
+        ],
+        "centre": "com_track",
+        "centre_h": 0.1,
+        "edge_cases": true,
+        "centre_silhouette": "fused",
+        "clamp": 0.86
+    },
+    "decisions": {
+        "parameters": "p0 -> distance D (mm), p1 -> elevation e, p2 -> azimuth phi, p3 -> roll psi about a centre c; ChartZ: elevation above the plane perpendicular to the model Z axis, azimuth 0 along -X, pi/2 along +Y, image up = model +Z at roll 0; ChartY: the same with Y (azimuth 0 along +X, pi/2 along +Z); roll centres 0, +-2pi/3 (charts 0, 1, 2), half-width 5pi/12; every view lies in some chart with |p|_inf <= 0.857 (train_chart.py).",
+        "stencil": "Fourier-Bessel: 63 components of the heights above a background 20 mm behind the mean depth of the mask, about its centre of mass, damped exp(-(n/3)^2), ISRU(12 x), plus the depth component ISRU(6 (Z_mean - Z_mid) / (Z_bg - Z_lo)); 512^2 rendering; finite-difference step 0.025.",
+        "charts": "all six charts and both attempts (Newton and plain step of the fused solver) are solved from p = 0; the solution with the smallest misfit (RMS of the y-tone difference on the known pixels of map_avail) is kept.",
+        "real images and stencil centre": "as for the cylinder (lidarfit_obj12_m1.json): virtual camera through the centre of mass of the mask, resampling into the stencil square, unknown pixels from the rendering (fused target), com_track with the fused silhouette, image borders as unknown pixels.",
+        "clamp": "the twinchers are embeddings on |p|_inf <= 0.86 only (README Part II); unclamped, the solver of the right chart sometimes ran to the border of [-1, 1]^4 (synthetic tests, output_lidarfit_synth)."
+    }
+}

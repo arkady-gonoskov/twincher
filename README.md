@@ -4,6 +4,15 @@
 [![PyPI](https://img.shields.io/pypi/v/twincher)](https://pypi.org/project/twincher/)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./assets/graphical_abstract-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="./assets/graphical_abstract-light.svg">
+    <img src="./assets/graphical_abstract-light.svg" alt="The structure of Twincher" width="1200">
+  </picture>
+  <br>
+</p>
+
 Twincher is a class of ML systems for perception, action planning and other tasks that can be formulated as inverse problems. Instead of approximating intended solutions directly, twinchers are designed to find a representation space that can guide fast, never-stalling iterative approach to solutions, ensuring reaching needed accuracy, commonly within just a few iterations. Twinchers "learn" such representations via exploration of given forward processes, such as an image renderer, mathematical model, physics simulation or an ML model. Twinchers can deal with both well- and ill-posed inverse problems and can be made tolerant to noise in the incoming data. More broadly, twinchers provide trainable representation learning framework with inductive bias tailored to generalizing over continuous dependencies. This Python package provides an implementation of the twincher concept in the form of primitives for various problems and an example architecture named "hyper-sail".
 
 - Reference: [A. Gonoskov, arXiv:2605.13470 (2026)](https://arxiv.org/abs/2605.13470)
@@ -578,7 +587,7 @@ If you use twincher in your work, please cite:
 
 ```bibtex
 @misc{gonoskov2026twincher,
-  title         = {Twincher: Bijective Representation Learning for Robust Inversion of Continuous Systems},
+  title         = {Twincher: Towards Robust and Precise Physical AI via Bijective Representation Learning},
   author        = {Gonoskov, Arkady},
   year          = {2026},
   eprint        = {2605.13470},

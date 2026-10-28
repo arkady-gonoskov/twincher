@@ -22,7 +22,7 @@ keywords:
   - machine learning
 preferred-citation:
   type: article
-  title: "Twincher: Bijective Representation Learning for Robust Inversion of Continuous Systems"
+  title: "Twincher: Towards Robust and Precise Physical AI via Bijective Representation Learning"
   authors:
     - family-names: Gonoskov
       given-names: Arkady

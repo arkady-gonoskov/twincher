@@ -1,0 +1,49 @@
+{
+    "description": "As lidarfit_obj12_m1.json, but chart A only (README Section 6.2, figures/edges_chart_A.png).",
+    "obj_id": 12,
+    "model": "{ITODD}/itodd_models/models/obj_000012.ply",
+    "model_eval": "{ITODD}/itodd_models/models_eval/obj_000012.ply",
+    "models_info": "{ITODD}/itodd_models/models_eval/models_info.json",
+    "charts": [
+        {
+            "name": "chart A (roll -73..73 deg)",
+            "twincher": "output_train_noise/final.twc"
+        }
+    ],
+    "stencil": {
+        "n_grid": 16,
+        "probe_order": "centre",
+        "resolution": 512,
+        "kernel_size": null,
+        "dist_range": [
+            638.38,
+            775.97
+        ],
+        "elevation_range": [
+            -1.2707963267948965,
+            1.2707963267948965
+        ],
+        "roll_range": [
+            -1.2707963267948965,
+            1.2707963267948965
+        ],
+        "margin": 1.1,
+        "s_amp": 0.8,
+        "dp": 0.05
+    },
+    "solver": {
+        "n_iter": 20,
+        "attempts": [
+            {
+                "newton": true
+            },
+            {
+                "newton": false
+            }
+        ],
+        "centre": "com_track",
+        "centre_h": 0.1,
+        "edge_cases": true,
+        "centre_silhouette": "fused"
+    }
+}
