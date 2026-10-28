@@ -1,0 +1,68 @@
+{
+    "description": "Milestone 1 (bop_itodd/README.md): LidarFit configuration for ITODD obj 12 with the amodal mask and the max-type probe kernel; two twinchers (charts of view directions). Paths are relative to this file.",
+    "obj_id": 12,
+    "model": "{ITODD}/itodd_models/models/obj_000012.ply",
+    "model_eval": "{ITODD}/itodd_models/models_eval/obj_000012.ply",
+    "models_info": "{ITODD}/itodd_models/models_eval/models_info.json",
+    "charts": [
+        {
+            "name": "chart A (roll -73..73 deg)",
+            "twincher": "output_train_noise/final.twc"
+        },
+        {
+            "name": "chart B (roll 17..163 deg)",
+            "twincher": "output_train_noise_roll90/final.twc",
+            "stencil": {
+                "roll_range": [
+                    0.3,
+                    2.8415926535897933
+                ]
+            }
+        }
+    ],
+    "stencil": {
+        "n_grid": 16,
+        "probe_order": "centre",
+        "resolution": 512,
+        "kernel_size": null,
+        "dist_range": [
+            638.38,
+            775.97
+        ],
+        "elevation_range": [
+            -1.2707963267948965,
+            1.2707963267948965
+        ],
+        "roll_range": [
+            -1.2707963267948965,
+            1.2707963267948965
+        ],
+        "margin": 1.1,
+        "s_amp": 0.8,
+        "dp": 0.05
+    },
+    "solver": {
+        "n_iter": 20,
+        "attempts": [
+            {
+                "newton": true
+            },
+            {
+                "newton": false
+            }
+        ],
+        "centre": "com_track",
+        "centre_h": 0.1,
+        "edge_cases": true,
+        "centre_silhouette": "fused"
+    },
+    "decisions": {
+        "parameters": "p0 -> distance D of the camera from the model origin (BOP depth_range of ITODD test images, mm); p1 -> elevation of the camera above the model XY plane (90 deg - polar angle); p2 -> roll about the optical axis (0: model +Z up in the image, positive counterclockwise); linear maps from [-1, 1]; azimuth fixed (continuous symmetry about Z); |roll| < 90 deg suffices because of the flip symmetry; chart margins 0.3 rad.",
+        "rendered image": "square of normalized image coordinates centred on the optical axis, half-side = margin * r / sqrt(D_min^2 - r^2) (r: radius of the bounding sphere about the model origin, 53.85 mm), i.e. 0.0931 (+-5.3 deg, 557 ITODD camera pixels); resolution 512^2 (1.09 camera pixels per pixel); Z depth along the optical axis, 0 where a ray misses; ray casting with NVIDIA Warp on the model mesh (models/, 348 faces).",
+        "probes": "16 x 16 pyramid kernels (half-size = probe spacing = 32 pixels) centred at the centre of mass of the mask, ordered from the centre outward; y in [-0.8, 0.8] for depths D_min - r .. D_max + r, background 0.8; unknown pixels (NaN) are ignored by the kernels.",
+        "derivatives": "central finite differences with dp = 0.05 (study_fd_step.py).",
+        "real images": "virtual camera: the real camera turned by the smallest rotation that puts its optical axis through the centre of mass of the mask; the depth map is resampled into the stencil square of the virtual camera (nearest pixel) and converted to depth along its axis; background outside the mask, unknown (NaN) where occluded (mask but not mask_visib) or without depth; with edge_cases off, masks touching the image border are dismissed.",
+        "charts": "each chart: a twincher with its stencil (ranges as in 'stencil', overridden by the chart's own 'stencil' entries); all charts and attempts are solved and the solution with the smallest misfit to the observation (RMS of the y-tone difference on the known pixels of map_avail) is kept.",
+        "stencil centre": "centre c: direction of the model origin; the observation is resampled for the stencil camera aimed at c, so that rendering and observation are aligned, and the pose follows from c. centre: 'com_track' (default: c moved so that the centres of mass of the observed silhouette and of the rendering coincide; centre_silhouette 'fused' or 'mask'), 'dist_y' (c refined by a quadratic model of |y_fused - y_curr|^2 on a 3 x 3 grid of step centre_h * side of the square), 'com' (stencil camera through the centre of mass of the mask, pose by matching the centres of mass); edge_cases: pixels outside the image are unknown instead of dismissing the instance."
+    }
+}
